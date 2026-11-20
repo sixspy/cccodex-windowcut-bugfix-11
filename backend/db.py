@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
-DB_PATH = DATA / "app.db"
+# 默认仍落 data/app.db；允许 WINDOWCUT_DB 覆盖（本地端到端用可写副本，母库不动）
+DB_PATH = Path(os.environ.get("WINDOWCUT_DB", DATA / "app.db"))
 FIXTURES = ROOT / "fixtures"
 FRONTEND = ROOT / "frontend"
 
@@ -27,11 +29,23 @@ PRODUCT_META = {
 }
 
 
-def connect() -> sqlite3.Connection:
+def connect(immediate: bool = False, busy_timeout: float = 30.0) -> sqlite3.Connection:
     DATA.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH, timeout=30)
+    # timeout 即 busy_timeout（秒）：写锁被占时的等待上限；
+    # 传 0 表示不排队，立即以 SQLITE_BUSY 失败，由调用方判定争用
+    conn = sqlite3.connect(DB_PATH, timeout=busy_timeout)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys=ON")
+    # WAL：不改表结构、不换库文件，仅切日志模式；读者不阻写者。
+    # 写者之间仍串行（由 busy_timeout 排队）。只读库等无法切模式时静默回退，
+    # 正确性不依赖 WAL——单写者语义在默认日志模式下同样成立。
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+    except sqlite3.OperationalError:
+        pass
+    if immediate:
+        # 立即拿写锁：同窗并发写在事务入口见胜负，而非互相覆盖
+        conn.execute("BEGIN IMMEDIATE")
     return conn
 
 

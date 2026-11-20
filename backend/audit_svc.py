@@ -44,7 +44,7 @@ def dashboard(authorization: AuthHeader = None):
         late_n = conn.execute("SELECT COUNT(*) c FROM late_bucket").fetchone()["c"]
         reject_n = conn.execute("SELECT COUNT(*) c FROM reject_slips").fetchone()["c"]
         hold_n = conn.execute(
-            "SELECT COUNT(*) c FROM hold_staging WHERE status='暂存'"
+            "SELECT COUNT(*) c FROM hold_staging WHERE status='暂存中'"
         ).fetchone()["c"]
         mats = conn.execute("SELECT COUNT(*) c FROM materializations").fetchone()["c"]
         contention = conn.execute("SELECT COUNT(*) c FROM contention_log").fetchone()["c"]

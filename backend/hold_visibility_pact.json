@@ -1,0 +1,23 @@
+{
+  "register": "暂存可见册",
+  "decided_on": "2026-11-21",
+  "path": "甲",
+  "path_name": "实表读写同源",
+  "write_table": "hold_staging",
+  "read_table": "hold_staging",
+  "shadow_table": null,
+  "rules": [
+    "create_hold 写入与 /api/holds 列表同读 hold_staging 实表，写后同库同事务提交即对后续读可见，禁止写后不可见",
+    "正确性口径只走实表读写这一条；禁止另建 hold_shadow 影子表双源混用",
+    "当日禁止改口；偏离本册的写入一律拒写（HTTP 409）并在审计记 hold_visibility_drift（可见偏了）",
+    "两人同时写同窗暂存须先占 hold:{window_name} 暂存锁，后到只记争用不写业务",
+    "暂存列表、写入回执、窗口、审计、争用五处同态"
+  ],
+  "change_history": [
+    {
+      "date": "2026-11-21",
+      "decision": "择定甲路径：hold_staging 实表读写同源，不引入 hold_shadow",
+      "reason": "库文件不换且现有写路径已落 hold_staging；缺陷在列表读端恒空，同表同源即闭合"
+    }
+  ]
+}
